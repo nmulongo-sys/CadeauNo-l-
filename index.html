@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Cadeaux de Noël</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light dark;--bg:light-dark(#0f3b2e,#0a2219);--paper:light-dark(#fff,#13241e);--ink:light-dark(#14231d,#e9f1ec);--mute:light-dark(#5b6b64,#9fb3aa);--line:light-dark(#e3e9e5,#24382f);--berry:#c8102e;--gold:#e3b448;--on:#f3f7f4;--soft:#bcd3c8}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Nunito,system-ui,sans-serif;overflow-x:clip}
+.wrap{max-width:760px;margin:0 auto;padding:clamp(20px,4vw,44px) max(4vw,14px) 90px}
+h1{font:400 clamp(30px,6vw,44px)/1.05 "DM Serif Display",Georgia,serif;color:var(--on);margin:0 0 4px}
+h2{font:400 26px/1.1 "DM Serif Display",Georgia,serif;color:var(--on);margin:22px 0 6px}
+.sub{color:var(--soft);margin:0 0 16px;font-size:15px}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.tab{flex:none;border:0;border-radius:999px;padding:10px 16px;min-height:44px;font:800 15px Nunito,sans-serif;background:rgba(255,255,255,.12);color:var(--on);cursor:pointer}
+.tab[aria-selected=true]{background:var(--on);color:#0f3b2e}
+.hint{color:var(--soft);font-size:14px;margin:10px 0 14px}
+ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.tag{position:relative;background:var(--paper);border-radius:14px;padding:12px 14px 12px 18px;box-shadow:0 2px 0 rgba(0,0,0,.18)}
+.tag::before{content:"";position:absolute;left:-5px;top:22px;width:10px;height:10px;border-radius:50%;background:var(--bg)}
+.tag.pris{opacity:.72}
+.row{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.tt{font-weight:800;font-size:17px;line-height:1.25}
+.tt .st{color:var(--gold);margin-right:4px}
+.dd{color:var(--mute);font-size:14px}
+.lk{display:inline-block;color:var(--berry);font-weight:700;font-size:14px;margin-right:12px;padding:4px 0;word-break:break-all}
+.badge{display:inline-block;border-radius:999px;padding:4px 10px;font-weight:800;font-size:13px;white-space:nowrap}
+.b-libre{background:light-dark(#e6f4ec,#173528);color:light-dark(#11713f,#7fd6a4)}
+.b-pris{background:light-dark(#fde8eb,#3a1219);color:var(--berry)}
+.b-moi{background:light-dark(#fff4d6,#3a2e0c);color:light-dark(#8a6200,#f1cf72)}
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.btn{border:0;border-radius:10px;background:var(--berry);color:#fff;font:800 15px Nunito,sans-serif;padding:9px 14px;min-height:44px;cursor:pointer}
+.btn.alt{background:light-dark(#eef2f0,#1d3029);color:var(--ink)}
+.btn.lite{background:transparent;color:var(--berry);padding:9px 6px}
+.btn:disabled{opacity:.5}
+form.card,.card{background:var(--paper);border-radius:14px;padding:14px;margin-top:12px;display:grid;gap:8px}
+label{font-size:13px;color:var(--mute);display:grid;gap:3px}
+input,textarea{font:16px Nunito,sans-serif;color:var(--ink);background:light-dark(#f6f8f7,#0e1c17);border:1.5px solid var(--line);border-radius:10px;padding:9px 10px;min-height:44px;width:100%}
+textarea{min-height:60px;resize:vertical}
+.chk{display:flex;gap:8px;align-items:center;font-size:15px;color:var(--ink)}
+.chk input{width:22px;min-height:22px}
+.empty{color:var(--soft);padding:12px 0}
+.pp{display:grid;gap:4px;border-top:1px solid var(--line);padding-top:10px}
+.pp:first-child{border-top:0;padding-top:0}
+.pp code{font-size:12px;word-break:break-all;color:var(--mute)}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--paper);border-radius:12px;padding:10px 16px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.3);max-width:92vw;z-index:9}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Cadeaux de Noël</h1>
+<p class="sub" id="sub">Chargement…</p>
+<div id="app"></div>
+</div>
+<script>
+{
+const URL_SB='https://hifqtzxhmboxbruraiab.supabase.co/rest/v1/rpc/';
+const KEY='sb_publishable_HdA4ThMx_yDk7212nJ_sIg_J18wCNYK';
+const ST={reserve:'Réservé',achete:'Acheté',emballe:'Emballé'};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const app=document.getElementById('app'),sub=document.getElementById('sub');
+let TOKEN='',S=null,vue='',edit=null;
+
+function lireToken(){
+  const m=location.hash.match(/t=([a-f0-9]{32,})/i);
+  if(m){try{localStorage.setItem('kdo-token',m[1])}catch(e){}return m[1]}
+  try{return localStorage.getItem('kdo-token')||''}catch(e){return ''}
+}
+async function rpc(fn,args){
+  const r=await fetch(URL_SB+fn,{method:'POST',headers:{'apikey':KEY,'Content-Type':'application/json'},body:JSON.stringify({p_token:TOKEN,...args})});
+  const t=await r.text();let d=null;try{d=t?JSON.parse(t):null}catch(e){}
+  if(!r.ok)throw new Error((d&&d.message)||'Erreur réseau');
+  return d;
+}
+function toast(m){document.querySelector('.toast')?.remove();const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.textContent=m;document.body.append(t);setTimeout(()=>t.remove(),3500)}
+
+async function charger(){
+  if(!TOKEN){sub.textContent='';app.innerHTML='<div class="card"><b>Bienvenue !</b><p style="margin:0">Ouvrez la page avec le lien personnel que vous avez reçu.</p></div>';return}
+  try{S=await rpc('kdo_etat',{})}catch(e){sub.textContent='';app.innerHTML=`<div class="card"><b>Lien non reconnu.</b><p style="margin:0">Demandez un nouveau lien à l'organisateur.</p></div>`;try{localStorage.removeItem('kdo-token')}catch(_){}return}
+  if(!vue||(vue!=='moi'&&vue!=='achats'&&vue!=='orga'&&!S.participants.some(p=>p.id===vue)))vue='moi';
+  render();
+}
+const nomDe=id=>(S.participants.find(p=>p.id===id)||{}).nom||'';
+const liens=i=>(i.liens||[]).filter(l=>/^https:\/\//.test(l)).map(l=>{let h='';try{h=new URL(l).hostname.replace(/^www\./,'')}catch(e){}return `<a class="lk" href="${esc(l)}" target="_blank" rel="noopener noreferrer">${esc(h||'Lien')} ↗</a>`}).join('');
+
+function formItem(i,owner){
+  return `<form class="card" data-form="${i?esc(i.id):'new'}" data-owner="${esc(owner)}">
+   <label>Cadeau<input name="titre" required maxlength="200" value="${esc(i?.titre)}"></label>
+   <label>Précision (taille, couleur, magasin…)<input name="detail" value="${esc(i?.detail)}"></label>
+   <label>Lien vers le produit (https://…)<input name="liens" inputmode="url" placeholder="https://" value="${esc((i?.liens||[]).join(' '))}"></label>
+   ${i?`<label>Note<textarea name="note">${esc(i.note)}</textarea></label><label class="chk"><input type="checkbox" name="prio" ${i.prio?'checked':''}> ★ Coup de cœur</label>`:''}
+   <div class="acts"><button class="btn">${i?'Enregistrer':'Ajouter'}</button>${i?`<button type="button" class="btn alt" data-a="annuler">Annuler</button><button type="button" class="btn lite" data-a="retirer" data-id="${esc(i.id)}">Retirer de la liste</button>`:''}</div>
+  </form>`;
+}
+
+function render(){
+  const moi=S.moi, autres=S.participants.filter(p=>p.id!==moi.id);
+  sub.textContent=`Bonjour ${moi.nom} ! Vous ne voyez jamais ce qui a été pris pour vous.`;
+  let h=`<div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-v="moi" aria-selected="${vue==='moi'}">Ma liste</button>
+    ${autres.map(p=>`<button class="tab" role="tab" data-v="${esc(p.id)}" aria-selected="${vue===p.id}">${esc(p.nom)}</button>`).join('')}
+    <button class="tab" role="tab" data-v="achats" aria-selected="${vue==='achats'}">Mes achats</button>
+    ${moi.admin?`<button class="tab" role="tab" data-v="orga" aria-selected="${vue==='orga'}">Organisation</button>`:''}
+  </div>`;
+  if(vue==='moi'){
+    const its=S.items.filter(i=>i.owner===moi.id);
+    h+=`<p class="hint">Ajoutez vos envies et collez un lien si vous en avez un. Personne ne vous dira ce qui est déjà pris 🤫</p>`;
+    h+=its.length?`<ul>${its.map(i=>edit===i.id?`<li>${formItem(i,moi.id)}</li>`:`<li class="tag"><div class="row"><div><div class="tt">${i.prio?'<span class="st">★</span>':''}${esc(i.titre)}</div>${i.detail?`<div class="dd">${esc(i.detail)}</div>`:''}${i.note?`<div class="dd">${esc(i.note)}</div>`:''}<div>${liens(i)}</div></div><button class="btn alt" data-a="edit" data-id="${esc(i.id)}">Modifier</button></div></li>`).join('')}</ul>`:'<p class="empty">Votre liste est vide pour l\'instant.</p>';
+    h+=formItem(null,moi.id);
+  }else if(vue==='achats'){
+    const its=S.items.filter(i=>i.achat&&i.achat.par===moi.id);
+    h+=`<p class="hint">Tout ce que vous avez réservé ou acheté.</p>`;
+    h+=its.length?`<ul>${its.map(i=>carte(i,true)).join('')}</ul>`:'<p class="empty">Rien de réservé pour l\'instant.</p>';
+  }else if(vue==='orga'&&moi.admin){
+    const base=location.origin+location.pathname;
+    h+=`<h2>Liens d'invitation</h2><p class="hint">Envoyez à chacun son lien personnel. Ne le partagez pas avec d'autres : il donne accès à sa liste.</p><div class="card">`;
+    h+=S.participants.map(p=>{const l=`${base}#t=${p.token}`;return `<div class="pp"><b>${esc(p.nom)}${p.id===moi.id?' (vous)':''}</b><code>${esc(l)}</code><div class="acts"><button class="btn" data-a="copier" data-l="${esc(l)}">Copier le lien</button>${p.id!==moi.id?`<button class="btn alt" data-a="relien" data-id="${esc(p.id)}">Nouveau lien</button><button class="btn lite" data-a="suppr" data-id="${esc(p.id)}">Supprimer</button>`:''}</div></div>`}).join('');
+    h+=`</div><form class="card" data-form="participant"><label>Ajouter un participant<input name="nom" required maxlength="60" placeholder="Prénom"></label><div class="acts"><button class="btn">Créer et générer son lien</button></div></form>`;
+  }else{
+    const p=S.participants.find(x=>x.id===vue), its=S.items.filter(i=>i.owner===vue);
+    const libres=its.filter(i=>!i.achat&&!i.retire).length;
+    h+=`<p class="hint">${libres} cadeau${libres>1?'x':''} encore libre${libres>1?'s':''} sur ${its.filter(i=>!i.retire).length}. Réservez avant d'acheter pour éviter les doublons.</p>`;
+    h+=its.length?`<ul>${its.map(i=>carte(i,false)).join('')}</ul>`:'<p class="empty">Sa liste est vide pour l\'instant.</p>';
+    if(moi.admin)h+=`<p class="hint" style="margin-top:18px">Organisateur : ajouter une idée sur la liste de ${esc(p.nom)} (elle sera visible par ${esc(p.nom)})</p>`+formItem(null,p.id);
+  }
+  app.innerHTML=h;
+}
+function carte(i,avecNom){
+  const a=i.achat, moiId=S.moi.id, mien=a&&a.par===moiId;
+  const badge=i.retire?'<span class="badge b-pris">Retiré de sa liste</span>':!a?'<span class="badge b-libre">Libre</span>':mien?`<span class="badge b-moi">${ST[a.statut]} par vous</span>`:`<span class="badge b-pris">${ST[a.statut]} par ${esc(a.nom)}</span>`;
+  let acts='';
+  if(!a&&!i.retire)acts=`<button class="btn" data-a="res" data-s="reserve" data-id="${esc(i.id)}">Je m'en occupe</button>`;
+  if(mien)acts=`${a.statut!=='achete'?`<button class="btn" data-a="res" data-s="achete" data-id="${esc(i.id)}">Acheté</button>`:''}${a.statut!=='emballe'?`<button class="btn alt" data-a="res" data-s="emballe" data-id="${esc(i.id)}">Emballé</button>`:''}<button class="btn lite" data-a="lib" data-id="${esc(i.id)}">Libérer</button>`;
+  return `<li class="tag ${a&&!mien?'pris':''}"><div class="row"><div><div class="tt">${i.prio?'<span class="st">★</span>':''}${esc(i.titre)}</div>${avecNom?`<div class="dd">Pour ${esc(nomDe(i.owner))}</div>`:''}${i.detail?`<div class="dd">${esc(i.detail)}</div>`:''}${i.note?`<div class="dd">${esc(i.note)}</div>`:''}<div>${liens(i)}</div></div>${badge}</div>${acts?`<div class="acts">${acts}</div>`:''}</li>`;
+}
+async function agir(fn,args,msg){try{await rpc(fn,args);if(msg)toast(msg)}catch(e){toast(e.message)}await charger()}
+let confirmEl=null;
+function confirmer(b,txt){if(confirmEl===b)return true;if(confirmEl)confirmEl.textContent=confirmEl.dataset.txt;confirmEl=b;b.dataset.txt=b.textContent;b.textContent=txt;setTimeout(()=>{if(confirmEl===b){b.textContent=b.dataset.txt;confirmEl=null}},4000);return false}
+
+app.addEventListener('click',async e=>{
+  const t=e.target.closest('[data-v]');if(t){vue=t.dataset.v;edit=null;render();return}
+  const b=e.target.closest('[data-a]');if(!b)return;
+  const id=b.dataset.id,a=b.dataset.a;
+  if(a==='edit'){edit=id;render();return}
+  if(a==='annuler'){edit=null;render();return}
+  if(a==='res')return agir('kdo_reserver',{p_item:id,p_statut:b.dataset.s},b.dataset.s==='reserve'?'Réservé pour vous ✔':'Mis à jour');
+  if(a==='lib'){if(!confirmer(b,'Confirmer ?'))return;return agir('kdo_liberer',{p_item:id},'Libéré')}
+  if(a==='retirer'){if(!confirmer(b,'Confirmer ?'))return;edit=null;return agir('kdo_retirer_item',{p_item:id},'Retiré')}
+  if(a==='relien'){if(!confirmer(b,"Sûr ? L'ancien lien ne marchera plus"))return;return agir('kdo_admin_nouveau_lien',{p_id:id},'Nouveau lien créé')}
+  if(a==='suppr'){if(!confirmer(b,'Supprimer définitivement ?'))return;return agir('kdo_admin_supprimer',{p_id:id},'Participant supprimé')}
+  if(a==='copier'){try{await navigator.clipboard.writeText(b.dataset.l);toast('Lien copié')}catch(_){const c=b.closest('.pp').querySelector('code');const r=document.createRange();r.selectNodeContents(c);const s=getSelection();s.removeAllRanges();s.addRange(r);toast('Lien sélectionné : copiez-le')}}
+});
+app.addEventListener('submit',async e=>{
+  e.preventDefault();const f=e.target,d=Object.fromEntries(new FormData(f));
+  if(f.dataset.form==='participant'){if(!d.nom.trim())return;return agir('kdo_admin_creer',{p_nom:d.nom},`${d.nom.trim()} ajouté — copiez son lien`)}
+  if(!d.titre||!d.titre.trim())return;
+  const ls=String(d.liens||'').split(/\s+/).filter(l=>l);
+  if(ls.some(l=>!/^https:\/\//i.test(l))){toast('Le lien doit commencer par https://');return}
+  f.querySelector('button').disabled=true;
+  if(f.dataset.form==='new'){
+    const owner=f.dataset.owner===S.moi.id?null:f.dataset.owner;
+    try{const nid=await rpc('kdo_ajouter_item',{p_titre:d.titre,p_detail:d.detail||'',p_lien:ls[0]||'',p_note:'',p_owner:owner});
+      if(ls.length>1)await rpc('kdo_modifier_item',{p_item:nid,p_titre:d.titre,p_detail:d.detail||'',p_liens:ls,p_note:'',p_prio:false});toast('Ajouté')}catch(err){toast(err.message)}
+    return charger();
+  }
+  edit=null;
+  return agir('kdo_modifier_item',{p_item:f.dataset.form,p_titre:d.titre,p_detail:d.detail||'',p_liens:ls,p_note:d.note||'',p_prio:!!d.prio},'Enregistré');
+});
+window.addEventListener('hashchange',()=>{TOKEN=lireToken();charger()});
+setInterval(()=>{const a=document.activeElement;if(document.hidden||edit||(a&&/INPUT|TEXTAREA/.test(a.tagName)&&a.value))return;charger()},30000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!edit)charger()});
+TOKEN=lireToken();
+if(location.hash.includes('t='))history.replaceState(null,'',location.pathname);
+charger();
+}
+</script>
+</body>
+</html>
