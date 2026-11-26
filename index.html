@@ -32,6 +32,11 @@ ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .badge{display:inline-block;border-radius:999px;padding:4px 10px;font-weight:800;font-size:13px;white-space:nowrap}
 .b-libre{background:light-dark(#e6f4ec,#173528);color:light-dark(#11713f,#7fd6a4)}
 .b-pris{background:light-dark(#fde8eb,#3a1219);color:var(--berry)}
+.b-part{background:light-dark(#e8eefc,#16223d);color:light-dark(#2b4fa8,#9db8f5)}
+.parts{margin-top:6px;font-size:14px;color:var(--mute)}
+.parts b{color:var(--ink)}
+.jauge{height:6px;border-radius:99px;background:var(--line);margin-top:6px;overflow:hidden}
+.jauge i{display:block;height:100%;background:var(--gold)}
 .b-moi{background:light-dark(#fff4d6,#3a2e0c);color:light-dark(#8a6200,#f1cf72)}
 .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .btn{border:0;border-radius:10px;background:var(--berry);color:#fff;font:800 15px Nunito,sans-serif;padding:9px 14px;min-height:44px;cursor:pointer}
@@ -65,7 +70,9 @@ const KEY='sb_publishable_HdA4ThMx_yDk7212nJ_sIg_J18wCNYK';
 const ST={reserve:'Réservé',achete:'Acheté',emballe:'Emballé'};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const app=document.getElementById('app'),sub=document.getElementById('sub');
-let TOKEN='',S=null,vue='',edit=null;
+let TOKEN='',S=null,vue='',edit=null,partOuvert=null;
+const eur=n=>Number(n).toLocaleString('fr-BE',{minimumFractionDigits:Number(n)%1?2:0,maximumFractionDigits:2})+' €';
+const num=v=>{const x=parseFloat(String(v||'').replace(',','.').replace(/[^0-9.]/g,''));return isFinite(x)&&x>0?x:null};
 
 function lireToken(){
   const m=location.hash.match(/t=([a-f0-9]{32,})/i);
@@ -114,8 +121,9 @@ function render(){
     h+=its.length?`<ul>${its.map(i=>edit===i.id?`<li>${formItem(i,moi.id)}</li>`:`<li class="tag"><div class="row"><div><div class="tt">${i.prio?'<span class="st">★</span>':''}${esc(i.titre)}</div>${i.detail?`<div class="dd">${esc(i.detail)}</div>`:''}${i.note?`<div class="dd">${esc(i.note)}</div>`:''}<div>${liens(i)}</div></div><button class="btn alt" data-a="edit" data-id="${esc(i.id)}">Modifier</button></div></li>`).join('')}</ul>`:'<p class="empty">Votre liste est vide pour l\'instant.</p>';
     h+=formItem(null,moi.id);
   }else if(vue==='achats'){
-    const its=S.items.filter(i=>i.achat&&i.achat.par===moi.id);
-    h+=`<p class="hint">Tout ce que vous avez réservé ou acheté.</p>`;
+    const its=S.items.filter(i=>(i.achat&&i.achat.par===moi.id)||(i.parts||[]).some(x=>x.par===moi.id));
+    const tot=its.reduce((s,i)=>s+Number(((i.parts||[]).find(x=>x.par===moi.id)||{}).montant||0),0);
+    h+=`<p class="hint">Tout ce que vous avez réservé, acheté ou auquel vous participez${tot?` (participations : ${eur(tot)})`:''}.</p>`;
     h+=its.length?`<ul>${its.map(i=>carte(i,true)).join('')}</ul>`:'<p class="empty">Rien de réservé pour l\'instant.</p>';
   }else if(vue==='orga'&&moi.admin){
     const base=location.origin+location.pathname;
@@ -124,8 +132,8 @@ function render(){
     h+=`</div><form class="card" data-form="participant"><label>Ajouter un participant<input name="nom" required maxlength="60" placeholder="Prénom"></label><div class="acts"><button class="btn">Créer et générer son lien</button></div></form>`;
   }else{
     const p=S.participants.find(x=>x.id===vue), its=S.items.filter(i=>i.owner===vue);
-    const libres=its.filter(i=>!i.achat&&!i.retire).length;
-    h+=`<p class="hint">${libres} cadeau${libres>1?'x':''} encore libre${libres>1?'s':''} sur ${its.filter(i=>!i.retire).length}. Réservez avant d'acheter pour éviter les doublons.</p>`;
+    const libres=its.filter(i=>!i.achat&&!(i.parts||[]).length&&!i.retire).length;
+    h+=`<p class="hint">${libres} cadeau${libres>1?'x':''} encore libre${libres>1?'s':''} sur ${its.filter(i=>!i.retire).length}. Réservez avant d'acheter pour éviter les doublons — ou participez à plusieurs pour un gros cadeau.</p>`;
     h+=its.length?`<ul>${its.map(i=>carte(i,false)).join('')}</ul>`:'<p class="empty">Sa liste est vide pour l\'instant.</p>';
     if(moi.admin)h+=`<p class="hint" style="margin-top:18px">Organisateur : ajouter une idée sur la liste de ${esc(p.nom)} (elle sera visible par ${esc(p.nom)})</p>`+formItem(null,p.id);
   }
@@ -133,22 +141,44 @@ function render(){
 }
 function carte(i,avecNom){
   const a=i.achat, moiId=S.moi.id, mien=a&&a.par===moiId;
-  const badge=i.retire?'<span class="badge b-pris">Retiré de sa liste</span>':!a?'<span class="badge b-libre">Libre</span>':mien?`<span class="badge b-moi">${ST[a.statut]} par vous</span>`:`<span class="badge b-pris">${ST[a.statut]} par ${esc(a.nom)}</span>`;
+  const parts=i.parts||[], mapart=parts.find(x=>x.par===moiId), autresParts=parts.filter(x=>x.par!==moiId);
+  const total=parts.reduce((s,x)=>s+Number(x.montant),0), prix=i.prix?Number(i.prix):null;
+  let badge;
+  if(i.retire)badge='<span class="badge b-pris">Retiré de sa liste</span>';
+  else if(a)badge=mien?`<span class="badge b-moi">${ST[a.statut]} par vous</span>`:`<span class="badge b-pris">${ST[a.statut]} par ${esc(a.nom)}</span>`;
+  else if(parts.length)badge=`<span class="badge b-part">Cadeau commun · ${eur(total)}</span>`;
+  else badge='<span class="badge b-libre">Libre</span>';
+  let info='';
+  if(parts.length){
+    info=`<div class="parts">Participations : ${parts.map(x=>`<b>${x.par===moiId?'vous':esc(x.nom)}</b> ${eur(x.montant)}`).join(' · ')}${prix?`<br>Prix ${eur(prix)} · ${total>=prix?'<b>entièrement financé ✔</b>':`reste <b>${eur(prix-total)}</b>`}`:''}</div>${prix?`<div class="jauge"><i style="width:${Math.min(100,total/prix*100).toFixed(0)}%"></i></div>`:''}`;
+  }else if(prix&&!a)info=`<div class="parts">Prix indicatif : ${eur(prix)}</div>`;
   let acts='';
-  if(!a&&!i.retire)acts=`<button class="btn" data-a="res" data-s="reserve" data-id="${esc(i.id)}">Je m'en occupe</button>`;
-  if(mien)acts=`${a.statut!=='achete'?`<button class="btn" data-a="res" data-s="achete" data-id="${esc(i.id)}">Acheté</button>`:''}${a.statut!=='emballe'?`<button class="btn alt" data-a="res" data-s="emballe" data-id="${esc(i.id)}">Emballé</button>`:''}<button class="btn lite" data-a="lib" data-id="${esc(i.id)}">Libérer</button>`;
-  return `<li class="tag ${a&&!mien?'pris':''}"><div class="row"><div><div class="tt">${i.prio?'<span class="st">★</span>':''}${esc(i.titre)}</div>${avecNom?`<div class="dd">Pour ${esc(nomDe(i.owner))}</div>`:''}${i.detail?`<div class="dd">${esc(i.detail)}</div>`:''}${i.note?`<div class="dd">${esc(i.note)}</div>`:''}<div>${liens(i)}</div></div>${badge}</div>${acts?`<div class="acts">${acts}</div>`:''}</li>`;
+  if(!i.retire&&!a){
+    if(!autresParts.length)acts+=`<button class="btn" data-a="res" data-s="reserve" data-id="${esc(i.id)}">${mapart?'Finalement, je prends tout':'Je prends tout'}</button>`;
+    acts+=`<button class="btn ${autresParts.length&&!mapart?'':'alt'}" data-a="part" data-id="${esc(i.id)}">${mapart?'Modifier ma part':parts.length?'Je participe aussi':'J\'en prends une partie'}</button>`;
+    if(mapart)acts+=`<button class="btn lite" data-a="quitter" data-id="${esc(i.id)}">Retirer ma part</button>`;
+  }else if(i.retire&&mapart)acts=`<button class="btn lite" data-a="quitter" data-id="${esc(i.id)}">Retirer ma part</button>`;
+  if(mien)acts=`${a.statut!=='achete'?`<button class="btn" data-a="res" data-s="achete" data-id="${esc(i.id)}">Acheté</button>`:''}${a.statut!=='emballe'?`<button class="btn alt" data-a="res" data-s="emballe" data-id="${esc(i.id)}">Emballé</button>`:''}<button class="btn alt" data-a="part" data-id="${esc(i.id)}">Partager avec d'autres</button><button class="btn lite" data-a="lib" data-id="${esc(i.id)}">Libérer</button>`;
+  const form=partOuvert===i.id?`<form class="card" data-form="part" data-id="${esc(i.id)}" style="margin-top:8px">
+    <label>Ma participation (€)<input name="montant" inputmode="decimal" required placeholder="ex. 30" value="${mapart?esc(mapart.montant):''}"></label>
+    <label>Prix total du cadeau (€, facultatif — pour voir ce qu'il reste)<input name="prix" inputmode="decimal" placeholder="ex. 180" value="${prix?esc(prix):''}"></label>
+    ${mien?'<p class="dd" style="margin:0">Votre réservation « totalité » sera transformée en participation : d\'autres pourront compléter.</p>':''}
+    <div class="acts"><button class="btn">Valider ma part</button><button type="button" class="btn alt" data-a="fermer">Annuler</button></div></form>`:'';
+  return `<li class="tag ${(a&&!mien)||(i.retire)?'pris':''}"><div class="row"><div><div class="tt">${i.prio?'<span class="st">★</span>':''}${esc(i.titre)}</div>${avecNom?`<div class="dd">Pour ${esc(nomDe(i.owner))}</div>`:''}${i.detail?`<div class="dd">${esc(i.detail)}</div>`:''}${i.note?`<div class="dd">${esc(i.note)}</div>`:''}<div>${liens(i)}</div>${info}</div>${badge}</div>${acts?`<div class="acts">${acts}</div>`:''}${form}</li>`;
 }
 async function agir(fn,args,msg){try{await rpc(fn,args);if(msg)toast(msg)}catch(e){toast(e.message)}await charger()}
 let confirmEl=null;
 function confirmer(b,txt){if(confirmEl===b)return true;if(confirmEl)confirmEl.textContent=confirmEl.dataset.txt;confirmEl=b;b.dataset.txt=b.textContent;b.textContent=txt;setTimeout(()=>{if(confirmEl===b){b.textContent=b.dataset.txt;confirmEl=null}},4000);return false}
 
 app.addEventListener('click',async e=>{
-  const t=e.target.closest('[data-v]');if(t){vue=t.dataset.v;edit=null;render();return}
+  const t=e.target.closest('[data-v]');if(t){vue=t.dataset.v;edit=null;partOuvert=null;render();return}
   const b=e.target.closest('[data-a]');if(!b)return;
   const id=b.dataset.id,a=b.dataset.a;
   if(a==='edit'){edit=id;render();return}
   if(a==='annuler'){edit=null;render();return}
+  if(a==='part'){partOuvert=id;render();setTimeout(()=>document.querySelector('form[data-form=part] input')?.focus(),0);return}
+  if(a==='fermer'){partOuvert=null;render();return}
+  if(a==='quitter'){if(!confirmer(b,'Confirmer ?'))return;return agir('kdo_quitter_part',{p_item:id},'Participation retirée')}
   if(a==='res')return agir('kdo_reserver',{p_item:id,p_statut:b.dataset.s},b.dataset.s==='reserve'?'Réservé pour vous ✔':'Mis à jour');
   if(a==='lib'){if(!confirmer(b,'Confirmer ?'))return;return agir('kdo_liberer',{p_item:id},'Libéré')}
   if(a==='retirer'){if(!confirmer(b,'Confirmer ?'))return;edit=null;return agir('kdo_retirer_item',{p_item:id},'Retiré')}
@@ -158,6 +188,14 @@ app.addEventListener('click',async e=>{
 });
 app.addEventListener('submit',async e=>{
   e.preventDefault();const f=e.target,d=Object.fromEntries(new FormData(f));
+  if(f.dataset.form==='part'){
+    const m=num(d.montant),px=num(d.prix),it=S.items.find(x=>x.id===f.dataset.id);
+    if(!m){toast('Indiquez un montant valide');return}
+    f.querySelector('button').disabled=true;
+    try{if(px!==(it&&it.prix?Number(it.prix):null))await rpc('kdo_definir_prix',{p_item:f.dataset.id,p_prix:px});
+      await rpc('kdo_participer',{p_item:f.dataset.id,p_montant:m});toast(`Participation de ${eur(m)} enregistrée ✔`)}catch(err){toast(err.message)}
+    partOuvert=null;return charger();
+  }
   if(f.dataset.form==='participant'){if(!d.nom.trim())return;return agir('kdo_admin_creer',{p_nom:d.nom},`${d.nom.trim()} ajouté — copiez son lien`)}
   if(!d.titre||!d.titre.trim())return;
   const ls=String(d.liens||'').split(/\s+/).filter(l=>l);
@@ -173,8 +211,8 @@ app.addEventListener('submit',async e=>{
   return agir('kdo_modifier_item',{p_item:f.dataset.form,p_titre:d.titre,p_detail:d.detail||'',p_liens:ls,p_note:d.note||'',p_prio:!!d.prio},'Enregistré');
 });
 window.addEventListener('hashchange',()=>{TOKEN=lireToken();charger()});
-setInterval(()=>{const a=document.activeElement;if(document.hidden||edit||(a&&/INPUT|TEXTAREA/.test(a.tagName)&&a.value))return;charger()},30000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!edit)charger()});
+setInterval(()=>{const a=document.activeElement;if(document.hidden||edit||partOuvert||(a&&/INPUT|TEXTAREA/.test(a.tagName)&&a.value))return;charger()},30000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!edit&&!partOuvert)charger()});
 TOKEN=lireToken();
 if(location.hash.includes('t='))history.replaceState(null,'',location.pathname);
 charger();
